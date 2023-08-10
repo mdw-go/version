@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mdwhatcott/exec"
 	"github.com/mdwhatcott/tui"
 	"github.com/mdwhatcott/version"
-	"github.com/mdwhatcott/version/git"
 )
 
 var Version = "dev"
@@ -18,8 +18,8 @@ func main() {
 	log.SetFlags(0)
 	flags := flag.NewFlagSet(fmt.Sprintf("%s @ %s", filepath.Base(os.Args[0]), Version), flag.ExitOnError)
 	_ = flags.Parse(os.Args[1:])
-	repository := new(git.Repository)
-	previous, _ := repository.CurrentVersion()
+	previousTag, _ := exec.Run("git describe")
+	previous, _ := version.ParseGitDescribe(previousTag)
 	if !previous.Dirty {
 		log.Println("No changes since last version:", previous)
 		return
@@ -42,9 +42,17 @@ func main() {
 		log.Println("No action taken at this time.")
 		return
 	}
-	err := repository.UpdateVersion(chosen)
+	_, err := exec.Run(fmt.Sprintf("git tag -a '%s' -m ''", chosen.String()))
 	if err != nil {
 		log.Fatalln("Could not update version:", err)
 	}
-	log.Printf("%v -> %v", previous, chosen)
+	currentTag, _ := exec.Run("git describe")
+	current, err := version.ParseGitDescribe(currentTag)
+	if err != nil {
+		log.Fatal("Could not parse updated version tag:", err)
+	}
+	if current.String() != chosen.String() {
+		log.Fatalf("Updated version incorrect. Got: [%s] Want: [%s]", currentTag, chosen.String())
+	}
+	log.Printf("%s -> %s", previous.String(), chosen.String())
 }

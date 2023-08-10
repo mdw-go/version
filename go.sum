@@ -1,3 +1,5 @@
+github.com/mdwhatcott/exec v1.0.0 h1:TWaOLReNZKh047I6EkBskrZ3mM3qTMxSfR97Ex53dhk=
+github.com/mdwhatcott/exec v1.0.0/go.mod h1:AbVwQivocJEdGMuBkafu/n8AZ3t26iEyCLFsxXj4lgQ=
 github.com/mdwhatcott/testing v1.2.0 h1:6k+vxQ3YSwLLKgukx9K/9ZeMPbwALuKuCAiajnTIX9k=
 github.com/mdwhatcott/testing v1.2.0/go.mod h1:DKbNObO+bditG0r27w3ZZmgcwOZiy6Yh6kFUKwvAGeI=
 github.com/mdwhatcott/tui v1.0.0 h1:UDQqnA4uwhBWx7TxE+rquzn7VbysD6qQlunUwLVQt3M=
