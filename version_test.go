@@ -1,8 +1,6 @@
 package version
 
 import (
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/mdwhatcott/testing/should"
@@ -34,23 +32,7 @@ func TestVersionString(t *testing.T) {
 	should.So(t, cleanV.String(), should.Equal, "v1.2.3")
 	should.So(t, dirtyV.String(), should.Equal, "v1.2.3")
 }
-
 func parse(raw string) Number {
-	var prefix string
-	v := strings.HasPrefix(raw, "v")
-	if v {
-		prefix = "v"
-	}
-	raw = strings.TrimPrefix(raw, "v")
-	fields := strings.Split(raw, ".")
-	return Number{
-		Prefix: prefix,
-		Major:  parseInt(fields[0]),
-		Minor:  parseInt(fields[1]),
-		Patch:  parseInt(fields[2]),
-	}
-}
-func parseInt(raw string) int {
-	parsed, _ := strconv.Atoi(raw)
+	parsed, _ := ParseGitDescribe(raw)
 	return parsed
 }
