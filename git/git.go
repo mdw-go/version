@@ -23,15 +23,21 @@ func (this *Repository) CurrentVersion() (version.Number, error) {
 func parseGitDescribe(raw string) (number version.Number, err error) {
 	raw = strings.TrimSpace(raw)
 	if strings.HasPrefix(raw, "fatal: No names found, cannot describe anything.") {
+		number.Prefix = "v"
 		number.Dirty = true
 		return number, nil
 	}
+	if strings.HasPrefix(raw, "v") {
+		number.Prefix = "v"
+		raw = strings.TrimPrefix(raw, "v")
+	}
+
 	fields := strings.Split(raw, "-")
 	number.Dirty = len(fields) > 1
 
 	parts := strings.Split(fields[0], ".")
 	if len(parts) < 3 {
-		return version.Number{}, errors.New("three version fields are required: major.minor.patch")
+		return version.Number{Prefix: "v"}, errors.New("three version fields are required: major.minor.patch")
 	}
 	number.Major, err = strconv.Atoi(parts[0])
 	if err != nil {
