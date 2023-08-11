@@ -32,7 +32,7 @@ func main() {
 		minor.String(): minor,
 		major.String(): major,
 	}
-	choice := tui.New(os.Stdin, os.Stdout).Select("tag",
+	choice := tui.New(os.Stdin, os.Stdout).Select(fmt.Sprintf("tag to succeed %s", previous.String()),
 		patch.String(),
 		minor.String(),
 		major.String(),
