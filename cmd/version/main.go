@@ -18,7 +18,7 @@ func main() {
 	log.SetFlags(0)
 	flags := flag.NewFlagSet(fmt.Sprintf("%s @ %s", filepath.Base(os.Args[0]), Version), flag.ExitOnError)
 	_ = flags.Parse(os.Args[1:])
-	previousTag, _ := exec.Run("git describe")
+	previousTag, _ := exec.Run("git describe --tags")
 	previous, _ := version.ParseGitDescribe(previousTag)
 	if !previous.Dirty {
 		log.Println("No changes since last version:", previous)
