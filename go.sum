@@ -1,6 +1,6 @@
-github.com/mdwhatcott/exec v1.0.0 h1:TWaOLReNZKh047I6EkBskrZ3mM3qTMxSfR97Ex53dhk=
-github.com/mdwhatcott/exec v1.0.0/go.mod h1:AbVwQivocJEdGMuBkafu/n8AZ3t26iEyCLFsxXj4lgQ=
-github.com/mdwhatcott/testing v1.2.0 h1:6k+vxQ3YSwLLKgukx9K/9ZeMPbwALuKuCAiajnTIX9k=
-github.com/mdwhatcott/testing v1.2.0/go.mod h1:DKbNObO+bditG0r27w3ZZmgcwOZiy6Yh6kFUKwvAGeI=
-github.com/mdwhatcott/tui v1.0.0 h1:UDQqnA4uwhBWx7TxE+rquzn7VbysD6qQlunUwLVQt3M=
-github.com/mdwhatcott/tui v1.0.0/go.mod h1:1CLnrH75UMfqa3n2jN/XVpx/YbH9CccQ/RzgA0nQKmg=
+github.com/mdwhatcott/exec v1.1.0 h1:4QHfGFsVRIr95RBYjA+1PfOVbsCM3e2szgrwhC0VPbA=
+github.com/mdwhatcott/exec v1.1.0/go.mod h1:AbVwQivocJEdGMuBkafu/n8AZ3t26iEyCLFsxXj4lgQ=
+github.com/mdwhatcott/testing v1.3.0 h1:46EDnWggTiaqd7RlAacvLUxlp7+c75XheqmmuT+e4Ko=
+github.com/mdwhatcott/testing v1.3.0/go.mod h1:qw9pmVND0BqPmN/DE1BtaVzIvmQcffQAY+DOpnZ3qMo=
+github.com/mdwhatcott/tui/v2 v2.0.1 h1:c27zBR/CgrIE+0HhUrQJAf2L5Gf5pBAXM44HjgM6sf4=
+github.com/mdwhatcott/tui/v2 v2.0.1/go.mod h1:yLs1o9ypHR2qQ5FQlOrBjQOMcFyp6z4k1GLv5JMtQ30=

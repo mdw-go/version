@@ -1,9 +1,9 @@
 module github.com/mdwhatcott/version
 
-go 1.20
+go 1.22
 
 require (
-	github.com/mdwhatcott/exec v1.0.0
-	github.com/mdwhatcott/testing v1.2.0
-	github.com/mdwhatcott/tui v1.0.0
+	github.com/mdwhatcott/exec v1.1.0
+	github.com/mdwhatcott/testing v1.3.0
+	github.com/mdwhatcott/tui/v2 v2.0.1
 )
