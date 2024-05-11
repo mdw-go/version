@@ -17,8 +17,9 @@ var Version = "dev"
 
 func main() {
 	log.SetFlags(0)
-	flags := flag.NewFlagSet(fmt.Sprintf("%s @ %s", filepath.Base(os.Args[0]), Version), flag.ExitOnError)
+	flags := flag.NewFlagSet(fmt.Sprintf("`%s` @ %s", filepath.Base(os.Args[0]), Version), flag.ExitOnError)
 	flags.Usage = func() {
+		_, _ = fmt.Fprintf(flags.Output(), "Usage of %s:\n", flags.Name())
 		_, _ = fmt.Fprintln(flags.Output(),
 			"When executed in a git repo, shows the user a list of incremented tags to choose from.")
 		flags.PrintDefaults()
