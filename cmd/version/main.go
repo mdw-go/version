@@ -39,6 +39,10 @@ func main() {
 			versions = append(versions, number)
 		}
 	}
+	if len(versions) == 0 {
+		tag(tui.New().Prompt("Enter the initial version tag (remember the 'v' prefix):"))
+		return
+	}
 	version.Sort(versions)
 	var highest version.Number
 	if len(versions) == 0 {
@@ -74,7 +78,13 @@ func main() {
 		log.Println("No action taken at this time.")
 		return
 	}
-	output, err := exec.Run(fmt.Sprintf("git tag -a '%s' -m ''", chosen.String()))
+	chosenVersion := chosen.String()
+	tag(chosenVersion)
+	log.Printf("%s -> %s", highest.String(), chosenVersion)
+}
+
+func tag(chosenVersion string) {
+	output, err := exec.Run(fmt.Sprintf("git tag -a '%s' -m ''", chosenVersion))
 	if err != nil {
 		log.Fatalln("Could not update version:", output, err)
 	}
@@ -86,8 +96,7 @@ func main() {
 	if err != nil {
 		log.Fatalln("Could not parse updated version tag:", err)
 	}
-	if updated.String() != chosen.String() {
-		log.Fatalf("Updated version incorrect. Got: [%s] Want: [%s]", updatedTag, chosen.String())
+	if updated.String() != chosenVersion {
+		log.Fatalf("Updated version incorrect. Got: [%s] Want: [%s]", updatedTag, chosenVersion)
 	}
-	log.Printf("%s -> %s", highest.String(), chosen.String())
 }
