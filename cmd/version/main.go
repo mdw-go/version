@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mdwhatcott/exec"
-	"github.com/mdwhatcott/tui/v2"
-	"github.com/mdwhatcott/version"
+	"github.com/mdw-go/exec"
+	"github.com/mdw-go/tui/v2"
+	"github.com/mdw-go/version"
 )
 
 var Version = "dev"

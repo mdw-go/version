@@ -1,6 +1,6 @@
-github.com/mdwhatcott/exec v1.1.0 h1:4QHfGFsVRIr95RBYjA+1PfOVbsCM3e2szgrwhC0VPbA=
-github.com/mdwhatcott/exec v1.1.0/go.mod h1:AbVwQivocJEdGMuBkafu/n8AZ3t26iEyCLFsxXj4lgQ=
-github.com/mdwhatcott/testing v1.3.0 h1:46EDnWggTiaqd7RlAacvLUxlp7+c75XheqmmuT+e4Ko=
-github.com/mdwhatcott/testing v1.3.0/go.mod h1:qw9pmVND0BqPmN/DE1BtaVzIvmQcffQAY+DOpnZ3qMo=
-github.com/mdwhatcott/tui/v2 v2.0.1 h1:c27zBR/CgrIE+0HhUrQJAf2L5Gf5pBAXM44HjgM6sf4=
-github.com/mdwhatcott/tui/v2 v2.0.1/go.mod h1:yLs1o9ypHR2qQ5FQlOrBjQOMcFyp6z4k1GLv5JMtQ30=
+github.com/mdw-go/exec v1.4.0 h1:rXaTwnJZww2BLCBVPC9s0PYqL3xjgDWPu3mDzwwD6Es=
+github.com/mdw-go/exec v1.4.0/go.mod h1:nJwOdsE812y/WonmN/edSaNSQ33sq/V7Dd9DduDlQcM=
+github.com/mdw-go/testing v1.5.0 h1:o7uprSvVM61lSpnLOKNJ/joFq7zCvm7kwAJ948exV2o=
+github.com/mdw-go/testing v1.5.0/go.mod h1:PpDrOp7WpQjh7nREEh8v0d7DZDA4Y/ffLEh/ixCGLlY=
+github.com/mdw-go/tui/v2 v2.1.0 h1:IkM8GyHcO5Y0HYAF78hn9YJpmoSvEwoifCt82hC3SJU=
+github.com/mdw-go/tui/v2 v2.1.0/go.mod h1:1s/uMeFW7PGOf1+1cz80c3zV+XAd2djNyEKsEeiCjkY=

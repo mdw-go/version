@@ -1,9 +1,9 @@
-module github.com/mdwhatcott/version
+module github.com/mdw-go/version
 
 go 1.22
 
 require (
-	github.com/mdwhatcott/exec v1.1.0
-	github.com/mdwhatcott/testing v1.3.0
-	github.com/mdwhatcott/tui/v2 v2.0.1
+	github.com/mdw-go/exec v1.4.0
+	github.com/mdw-go/testing v1.5.0
+	github.com/mdw-go/tui/v2 v2.1.0
 )
