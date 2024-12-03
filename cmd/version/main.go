@@ -29,30 +29,22 @@ func main() {
 	if err != nil {
 		log.Fatalln("Failed to find any git refs (are we in a git repository with at least one commit?):", refs, err)
 	}
-	rawTags, err := exec.Run("git tag")
+	describe, err := exec.Run("git describe --tags")
 	if err != nil {
-		log.Fatalln("Failed to run 'git tag':", err)
-	}
-	var versions []version.Number
-	for _, tag := range strings.Split(rawTags, "\n") {
-		number, err := version.Parse(tag)
-		if err == nil {
-			versions = append(versions, number)
-		}
-	}
-	if len(versions) == 0 {
-		tag(tui.New().Prompt("Enter the initial version tag (remember the 'v' prefix):"))
+		tag(tui.New().Prompt("Enter the initial version tag (remember the 'v' prefix): "))
 		return
 	}
-	version.Sort(versions)
-	var highest version.Number
-	if len(versions) == 0 {
-		highest = version.Number{Prefix: "v", Dev: -1}
-	} else {
-		highest = versions[len(versions)-1]
+	describe = strings.TrimSpace(describe)
+	raw := describe
+	dash := strings.Index(describe, "-")
+	if dash >= 0 {
+		raw = raw[:dash]
 	}
-	describe, _ := exec.Run("git describe --tags")
-	if highest.String() == describe {
+	highest, err := version.Parse(raw)
+	if err != nil {
+		log.Fatalf("Failed to parse version [%s]: %s", describe, err)
+	}
+	if dash < 0 {
 		log.Println("No changes since last version:", highest)
 		return
 	}
