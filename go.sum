@@ -1,6 +1,6 @@
 github.com/mdw-go/exec v1.4.0 h1:rXaTwnJZww2BLCBVPC9s0PYqL3xjgDWPu3mDzwwD6Es=
 github.com/mdw-go/exec v1.4.0/go.mod h1:nJwOdsE812y/WonmN/edSaNSQ33sq/V7Dd9DduDlQcM=
-github.com/mdw-go/testing v1.5.0 h1:o7uprSvVM61lSpnLOKNJ/joFq7zCvm7kwAJ948exV2o=
-github.com/mdw-go/testing v1.5.0/go.mod h1:PpDrOp7WpQjh7nREEh8v0d7DZDA4Y/ffLEh/ixCGLlY=
-github.com/mdw-go/tui/v2 v2.1.0 h1:IkM8GyHcO5Y0HYAF78hn9YJpmoSvEwoifCt82hC3SJU=
-github.com/mdw-go/tui/v2 v2.1.0/go.mod h1:1s/uMeFW7PGOf1+1cz80c3zV+XAd2djNyEKsEeiCjkY=
+github.com/mdw-go/testing v1.5.1 h1:lUcj4MM7SA29bZ6PPspaqw2PpPmb/GL/EuoEQSPzeOI=
+github.com/mdw-go/testing v1.5.1/go.mod h1:PpDrOp7WpQjh7nREEh8v0d7DZDA4Y/ffLEh/ixCGLlY=
+github.com/mdw-go/tui/v2 v2.1.1 h1:3DCJPxkxtccWyvDxS+0cUzFTr6LWQ7IqA3BuSbfpCPY=
+github.com/mdw-go/tui/v2 v2.1.1/go.mod h1:1s/uMeFW7PGOf1+1cz80c3zV+XAd2djNyEKsEeiCjkY=

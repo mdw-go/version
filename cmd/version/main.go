@@ -3,21 +3,26 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/mdw-go/exec"
 	"github.com/mdw-go/tui/v2"
-	"github.com/mdw-go/version"
+	"github.com/mdw-go/version/v2"
 )
 
 var Version = "dev"
 
 func main() {
 	log.SetFlags(0)
+	var verbose bool
 	flags := flag.NewFlagSet(fmt.Sprintf("`%s` @ %s", filepath.Base(os.Args[0]), Version), flag.ExitOnError)
+	flags.BoolVar(&verbose, "v", false, "verbose mode")
 	flags.Usage = func() {
 		_, _ = fmt.Fprintf(flags.Output(), "Usage of %s:\n", flags.Name())
 		_, _ = fmt.Fprintln(flags.Output(),
@@ -25,13 +30,13 @@ func main() {
 		flags.PrintDefaults()
 	}
 	_ = flags.Parse(os.Args[1:])
-	refs, err := exec.Run("git show-ref")
+	refs, err := execute(verbose, "git show-ref")
 	if err != nil {
 		log.Fatalln("Failed to find any git refs (are we in a git repository with at least one commit?):", refs, err)
 	}
-	describe, err := exec.Run("git describe --tags")
+	describe, err := execute(verbose, "git describe --tags")
 	if err != nil {
-		tag(tui.New().Prompt("Enter the initial version tag (remember the 'v' prefix): "))
+		tag(verbose, tui.New().Prompt("Enter the initial version tag (remember the 'v' prefix): "))
 		return
 	}
 	describe = strings.TrimSpace(describe)
@@ -48,11 +53,15 @@ func main() {
 		log.Println("No changes since last version:", highest)
 		return
 	}
+	user, err := user.Current()
+	if err != nil {
+		log.Fatalln("Failed to resolve current OS user:", err)
+	}
 	var (
-		major = highest.Increment("major")
-		minor = highest.Increment("minor")
-		patch = highest.Increment("patch")
-		dev   = highest.Increment("dev")
+		major = highest.IncrementMajor()
+		minor = highest.IncrementMinor()
+		patch = highest.IncrementPatch()
+		dev   = highest.IncrementDev(fmt.Sprintf("%s-%d", user.Username, time.Now().Unix()))
 	)
 	choices := map[string]version.Number{
 		major.String(): major,
@@ -72,16 +81,16 @@ func main() {
 		return
 	}
 	chosenVersion := chosen.String()
-	tag(chosenVersion)
+	tag(verbose, chosenVersion)
 	log.Printf("%s -> %s", highest.String(), chosenVersion)
 }
 
-func tag(chosenVersion string) {
-	output, err := exec.Run(fmt.Sprintf("git tag -a '%s' -m ''", chosenVersion))
+func tag(verbose bool, chosenVersion string) {
+	output, err := execute(verbose, fmt.Sprintf("git tag -a '%s' -m ''", chosenVersion))
 	if err != nil {
 		log.Fatalln("Could not update version:", output, err)
 	}
-	updatedTag, err := exec.Run("git describe")
+	updatedTag, err := execute(verbose, "git describe")
 	if err != nil {
 		log.Fatalln("Failed to run 'git describe':", err)
 	}
@@ -92,4 +101,13 @@ func tag(chosenVersion string) {
 	if updated.String() != chosenVersion {
 		log.Fatalf("Updated version incorrect. Got: [%s] Want: [%s]", updatedTag, chosenVersion)
 	}
+}
+
+func execute(verbose bool, command string) (string, error) {
+	var writer io.Writer = io.Discard
+	if verbose {
+		writer = os.Stderr
+		log.Println(">>>", command)
+	}
+	return exec.Run(command, exec.Options.Out(writer))
 }

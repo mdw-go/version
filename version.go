@@ -13,12 +13,10 @@ type Number struct {
 	Major  int
 	Minor  int
 	Patch  int
-	Dev    int
+	Dev    string
 }
 
 func Parse(raw string) (number Number, err error) {
-	number.Dev = -1
-
 	raw = strings.TrimSpace(raw)
 	if strings.HasPrefix(raw, "v") {
 		number.Prefix = "v"
@@ -43,47 +41,30 @@ func Parse(raw string) (number Number, err error) {
 		return Number{}, err
 	}
 	if len(fields) > 1 {
-		dev, err := strconv.Atoi(fields[1])
-		if err != nil {
-			return Number{}, err
-		} else {
-			number.Dev = dev
-		}
+		number.Dev = "-dev" + fields[1]
 	}
 	return number, nil
 }
 
 func (this Number) String() (result string) {
-	result = fmt.Sprintf("%s%d.%d.%d", this.Prefix, this.Major, this.Minor, this.Patch)
-	if this.Dev > -1 {
-		result += "-dev" + fmt.Sprint(this.Dev)
-	}
-	return result
+	return fmt.Sprintf("%s%d.%d.%d%s", this.Prefix, this.Major, this.Minor, this.Patch, this.Dev)
 }
 func (this Number) IncrementMajor() Number {
-	return Number{Prefix: this.Prefix, Major: this.Major + 1, Dev: -1}
+	return Number{Prefix: this.Prefix, Major: this.Major + 1}
 }
 func (this Number) IncrementMinor() Number {
-	return Number{Prefix: this.Prefix, Major: this.Major, Minor: this.Minor + 1, Dev: -1}
+	return Number{Prefix: this.Prefix, Major: this.Major, Minor: this.Minor + 1}
 }
 func (this Number) IncrementPatch() Number {
-	return Number{Prefix: this.Prefix, Major: this.Major, Minor: this.Minor, Patch: this.Patch + 1, Dev: -1}
+	return Number{Prefix: this.Prefix, Major: this.Major, Minor: this.Minor, Patch: this.Patch + 1}
 }
-func (this Number) IncrementDev() Number {
-	return Number{Prefix: this.Prefix, Major: this.Major, Minor: this.Minor, Patch: this.Patch, Dev: this.Dev + 1}
-}
-func (this Number) Increment(how string) Number {
-	switch strings.ToLower(how) {
-	case "major":
-		return this.IncrementMajor()
-	case "minor":
-		return this.IncrementMinor()
-	case "patch":
-		return this.IncrementPatch()
-	case "dev":
-		return this.IncrementDev()
-	default:
-		return this
+func (this Number) IncrementDev(name string) Number {
+	return Number{
+		Prefix: this.Prefix,
+		Major:  this.Major,
+		Minor:  this.Minor,
+		Patch:  this.Patch,
+		Dev:    "-dev-" + name,
 	}
 }
 
