@@ -27,8 +27,9 @@ func main() {
 		_, _ = fmt.Fprintf(flags.Output(), "Usage of %s:\n", flags.Name())
 		_, _ = fmt.Fprintln(flags.Output(),
 			"When executed in a git repo, shows the user a list of incremented tags to choose from. "+
-				"The 'dev' tag includes a 'username', either from an environment variable called 'VERSION_USERNAME' "+
-				"or if that variable does not exist, the current OS username is used.")
+				"The 'dev' tag includes a 'username', either from the first path element of the current git branch, "+
+				"an environment variable called 'VERSION_USERNAME', "+
+				"or the current OS username (whichever can be resolved first).")
 		flags.PrintDefaults()
 	}
 	_ = flags.Parse(os.Args[1:])
@@ -85,6 +86,10 @@ func main() {
 }
 
 func username() string {
+	branch, _ := execute(false, "git branch --show-current")
+	if root, _, ok := strings.Cut(branch, "/"); ok {
+		return root // mikewhat/some-feature -> mikewhat
+	}
 	username, ok := os.LookupEnv("VERSION_USERNAME")
 	if ok {
 		return username
