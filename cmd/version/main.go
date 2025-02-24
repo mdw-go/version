@@ -26,7 +26,9 @@ func main() {
 	flags.Usage = func() {
 		_, _ = fmt.Fprintf(flags.Output(), "Usage of %s:\n", flags.Name())
 		_, _ = fmt.Fprintln(flags.Output(),
-			"When executed in a git repo, shows the user a list of incremented tags to choose from.")
+			"When executed in a git repo, shows the user a list of incremented tags to choose from. "+
+				"The 'dev' tag includes a 'username', either from an environment variable called 'VERSION_USERNAME' "+
+				"or if that variable does not exist, the current OS username is used.")
 		flags.PrintDefaults()
 	}
 	_ = flags.Parse(os.Args[1:])
@@ -53,15 +55,12 @@ func main() {
 		log.Println("No changes since last version:", highest)
 		return
 	}
-	user, err := user.Current()
-	if err != nil {
-		log.Fatalln("Failed to resolve current OS user:", err)
-	}
+	username := username()
 	var (
 		major = highest.IncrementMajor()
 		minor = highest.IncrementMinor()
 		patch = highest.IncrementPatch()
-		dev   = highest.IncrementDev(fmt.Sprintf("%s-%d", user.Username, time.Now().Unix()))
+		dev   = highest.IncrementDev(fmt.Sprintf("%s-%d", username, time.Now().Unix()))
 	)
 	choices := map[string]version.Number{
 		major.String(): major,
@@ -83,6 +82,18 @@ func main() {
 	chosenVersion := chosen.String()
 	tag(verbose, chosenVersion)
 	log.Printf("%s -> %s", highest.String(), chosenVersion)
+}
+
+func username() string {
+	username, ok := os.LookupEnv("VERSION_USERNAME")
+	if ok {
+		return username
+	}
+	osUser, err := user.Current()
+	if err != nil {
+		log.Fatalln("Failed to resolve current OS user:", err)
+	}
+	return osUser.Username
 }
 
 func tag(verbose bool, chosenVersion string) {
