@@ -20,8 +20,10 @@ var Version = "dev"
 
 func main() {
 	log.SetFlags(0)
+	var from string
 	var verbose bool
 	flags := flag.NewFlagSet(fmt.Sprintf("`%s` @ %s", filepath.Base(os.Args[0]), Version), flag.ExitOnError)
+	flags.StringVar(&from, "from", "", "If supplied, calculate proposed versions from this version value, otherwise run with output of `git describe --tags`.")
 	flags.BoolVar(&verbose, "v", false, "verbose mode")
 	flags.Usage = func() {
 		_, _ = fmt.Fprintf(flags.Output(), "Usage of %s:\n", flags.Name())
@@ -37,31 +39,32 @@ func main() {
 	if err != nil {
 		log.Fatalln("Failed to find any git refs (are we in a git repository with at least one commit?):", refs, err)
 	}
-	describe, err := execute(verbose, "git describe --tags")
-	if err != nil {
-		tag(verbose, tui.New().Prompt("Enter the initial version tag (remember the 'v' prefix): "))
-		return
+	if from == "" {
+		describe, err := execute(verbose, "git describe --tags")
+		if err != nil {
+			tag(verbose, tui.New().Prompt("Enter the initial version tag (remember the 'v' prefix): "))
+			return
+		}
+		describe = strings.TrimSpace(describe)
+		from = describe
 	}
-	describe = strings.TrimSpace(describe)
-	raw := describe
-	dash := strings.Index(describe, "-")
+	dash := strings.Index(from, "-")
 	if dash >= 0 {
-		raw = raw[:dash]
+		from = from[:dash]
 	}
-	highest, err := version.Parse(raw)
+	highest, err := version.Parse(from)
 	if err != nil {
-		log.Fatalf("Failed to parse version [%s]: %s", describe, err)
+		log.Fatalf("Failed to parse version [%s]: %s", from, err)
 	}
 	if dash < 0 {
 		log.Println("No changes since last version:", highest)
 		return
 	}
-	username := username()
 	var (
 		major = highest.IncrementMajor()
 		minor = highest.IncrementMinor()
 		patch = highest.IncrementPatch()
-		dev   = highest.IncrementDev(fmt.Sprintf("%s-%d", username, time.Now().Unix()))
+		dev   = highest.IncrementDev(fmt.Sprintf("%s-%d", username(), time.Now().Unix()))
 	)
 	choices := map[string]version.Number{
 		major.String(): major,
