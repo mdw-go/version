@@ -46,20 +46,22 @@ func main() {
 			return
 		}
 		describe = strings.TrimSpace(describe)
+		dash := strings.Index(describe, "-")
+		if dash >= 0 {
+			describe = describe[:dash]
+		}
+		if dash < 0 {
+			log.Println("No changes since last version:", describe)
+			return
+		}
 		from = describe
 	}
-	dash := strings.Index(from, "-")
-	if dash >= 0 {
-		from = from[:dash]
-	}
+
 	highest, err := version.Parse(from)
 	if err != nil {
 		log.Fatalf("Failed to parse version [%s]: %s", from, err)
 	}
-	if dash < 0 {
-		log.Println("No changes since last version:", highest)
-		return
-	}
+
 	var (
 		major = highest.IncrementMajor()
 		minor = highest.IncrementMinor()
