@@ -1,0 +1,249 @@
+$ ollama run qwen2.5vl
+>>> I need a Go script to help me create annotated git tags to version Go modules.
+... Generally, version tags used in Go projects start with a 'v', but we have a few modules that aren't imported by any other modules and so their version values don't start wi
+... th a 'v'.
+... Most of our git repositories contain only a single Go module, which means that the version tag is just a 'v' followed by a semantic version number.
+... Some of our git repositories contain multiple Go modules, and so those require that we prefix the 'v' and the semantic version number with the relative path of the folder c
+... ontaining the go.mod file.
+...
+... So, the script needs to identity the root folder of the project, find all Go modules (indicated by go.mod files), and if there are multiple modules then ask the user which
+... one we are creating a version tag for (and include the most recently tagged version for each module in the selection listing). After the user makes their selection, then re
+... mind the user of the most recent tagged version (by scanning the output of `git describe --tags`) and present options for the next version: major version upgrade, minor ver
+... sion upgrade, patch version upgrade, and as a special case a version in the form of <most-recent-version>-dev-<username>-<unix-timestamp>. Those 4 options should use a lead
+... ing 'v' if the most recent version featured a leading 'v'. The username referenced in the 4th option may come from an environment variable called VERSION_USERNAME, or the f
+... irst path element in the output of `git branch --show-current` (if a slash is present), or the current OS username.
+...
+... If there are no git versions for the chosen Go module yet, ask the user to input the initial version for the chosen Go module (with a reminder that they should probably use
+...  a leading 'v'). IMPORTANT: The user shouldn't have to ever specify or see the relative directory prefix part of the version. The tool should manage that detail that intern
+... ally.
+...
+... So, this tool will work for newly defined Go modules, existing Go modules with long version histories, and it should work for modules that are the only module in the git re
+... pository, and it should also be able to work with multi-module git repositories.
+...
+... The user may also supply a '-from' flag, which would contain a full git version tag which will be used as the base/current version instead of scanning the output of `git de
+... scribe --tags`.
+... Adapt the text of these very instructions as the 'usage' text when the user specified the -h flag (just use the standard library "flags" package).
+...
+... When presenting the user with multiple options to select from, each option should be numbered, and the user should enter the number corresponding with their choice.
+... Please use log.Fatalln for error messages. On successful creation of the git tag, please log the full text of the tag created.
+
+Below is a Go script that meets the requirements you've described. It includes the ability to handle both single-module and multi-module Go projects, and it allows the
+user to specify the base version tag using the `-from` flag. The script also handles the creation of annotated git tags for Go modules, taking into account the leading
+'v' and the semantic versioning.
+
+```go
+package main
+
+import (
+        "flag"
+        "fmt"
+        "log"
+        "os"
+        "os/exec"
+        "strings"
+        "time"
+)
+
+func main() {
+        var fromTag string
+        flag.StringVar(&fromTag, "from", "", "Specify the base version tag to use as the starting point")
+        flag.Parse()
+
+        if fromTag == "" {
+                fromTag = "v0.0.0"
+        }
+
+        rootDir, err := findRootDir()
+        if err != nil {
+                log.Fatalln("Failed to find the root directory:", err)
+        }
+
+        modules, err := findGoModules(rootDir)
+        if err != nil {
+                log.Fatalln("Failed to find Go modules:", err)
+        }
+
+        if len(modules) == 0 {
+                log.Fatalln("No Go modules found in the project.")
+        }
+
+        if len(modules) > 1 {
+                fmt.Println("Multiple Go modules found in the project:")
+                for i, module := range modules {
+                        fmt.Printf("%d. %s\n", i+1, module)
+                }
+                fmt.Print("Please select the module for which version tag (number): ")
+                var selection int
+                fmt.Scanln(&selection)
+                if selection < 1 || selection > len(modules) {
+                        log.Fatalln("Invalid selection.")
+                }
+                currentModule := modules[selection-1]
+        } else {
+                currentModule := modules[0]
+        }
+
+        var latestVersion string
+        if fromTag == "v0.0.0" {
+                latestVersion, err = getLatestVersion(currentModule)
+                if err != nil {
+                        log.Fatalln("Failed to get the latest version:", err)
+                }
+        } else {
+                latestVersion = fromTag
+        }
+
+        fmt.Printf("The Latest version for %s: %s\n", currentModule, latestVersion)
+
+        var versionType int
+        fmt.Println("Please select the version type:")
+        fmt.Println("1. Major version upgrade")
+        fmt.Println("2. Minor version upgrade")
+        fmt.Println("3. Patch version upgrade")
+        fmt.Println("4. Custom version (v<most-recent-version>-dev-<username>-<unix-timestamp>)")
+        fmt.Print("Choice: ")
+        fmt.Scanln(&versionType)
+
+        var version string
+        switch versionType {
+        case 1:
+                version = incrementMajorVersion(latestVersion)
+        case 2:
+                version = incrementMinorVersion(latestVersion)
+        case 3:
+                version = incrementPatchVersion(latestVersion)
+        case 4:
+                version = customVersion(latestVersion)
+        default:
+                log.Fatalln("Invalid version type.")
+        }
+
+        fmt.Printf("Selected version: %s\n", version)
+
+        var username string
+        if os.Getenv("VERSION_USERNAME") != "" {
+                username = os.Getenv("VERSION_USERNAME")
+        } else {
+                currentBranch := exec.Command("git", "branch", "--show-current").CombinedOutput()
+                username = strings.Split(strings.TrimSpace(string(currentBranch)), "/")[0]
+        }
+        username = strings.TrimSpace(username)
+
+        timestamp := time.Now().Unix()
+        version = fmt.Sprintf("%s-dev-%s-%d", version, username, timestamp)
+
+        fmt.Printf("Creating git tag: %s\n", version)
+
+        err = createGitTag(version, currentModule)
+        if err != nil {
+                log.Fatalln("Failed to create git tag:", err)
+        }
+
+        fmt.Printf("Git tag created: %s\n", version)
+}
+
+func findRootDir() (string, error) {
+        cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+        output, err := cmd.CombinedOutput()
+        if err != nil {
+                return "", err
+        }
+        return strings.TrimSpace(string(output)), nil
+}
+
+func findGoModules(rootDir string) ([]string, error) {
+        modules := []string{}
+        cmd := exec.Command("find", rootDir, "-name", "go.mod")
+        output, err := cmd.CombinedOutput()
+        if err != nil {
+                return nil, err
+        }
+        modules = strings.Split(strings.TrimSpace(string(output)), "\n")
+        return modules, nil
+}
+
+func getLatestVersion(module string) (string, error) {
+        cmd := exec.Command("git", "describe", "--tags", "--abbrev=0", module)
+        output, err := cmd.CombinedOutput()
+        if err != nil {
+                return "", err
+        }
+        return strings.TrimSpace(string(output)), nil
+}
+
+func incrementMajorVersion(version string) string {
+        parts := strings.Split(version, ".")
+        if len(parts) < 3 {
+                return "v1.0.0"
+        }
+        major, _ := strconv.Atoi(parts[0])
+        minor, _ := strconv.Atoi(parts[1])
+        patch, _ := strconv.Atoi(parts[2])
+        return fmt.Sprintf("v%d.0.0", major+1)
+}
+
+func incrementMinorVersion(version string) string {
+        parts := strings.Split(version, ".")
+        if len(parts) < 3 {
+                return "v0.1.0"
+        }
+        major, _ := strconv.Atoi(parts[0])
+        minor, _ := strconv.Atoi(parts[1])
+        patch, _ := strconv.Atoi(parts[2])
+        return fmt.Sprintf("v%d.%d.0", major, minor+1)
+}
+
+func incrementPatchVersion(version string) string {
+        parts := strings.Split(version, ".")
+        if len(parts) < 3 {
+                return "v0.0.1"
+        }
+        major, _ := strconv.Atoi(parts[0])
+        minor, _ := strconv.Atoi(parts[1])
+        patch, _ := strconv.Atoi(parts[2])
+        return fmt.Sprintf("v%d.%d.%d", major, minor, patch+1)
+}
+
+func customVersion(version string) string {
+        parts := strings.Split(version, ".")
+        if len(parts) < 3 {
+                return "v0.0.0"
+        }
+        major, _ := strconv.Atoi(parts[0])
+        minor, _ := strconv.Atoi(parts[1])
+        patch, _ := strconv.Atoi(parts[2])
+        return fmt.Sprintf("v%d.%d.%d-dev-%s-%d", major, minor, patch, os.Getenv("VERSION_USERNAME"), time.Now().Unix())
+}
+
+func createGitTag(version string, module string) error {
+        cmd := exec.Command("git", "tag", version, "-m", "Version " + version)
+        cmd.Dir = module
+        output, err := cmd.CombinedOutput()
+        if err != nil {
+                return err
+        }
+        fmt.Println(string(output))
+        return nil
+}
+```
+
+### Usage
+To use the script, you can run it with the following command:
+
+```sh
+go run main.go -from=v1.2.3
+```
+
+This will use the version tag `v1.2.3` as the base version instead of scanning the output of `git describe --tags`.
+
+### Flags
+- `-from`: Specifies the base version tag to use as the starting point.
+
+### Example
+If you have a multi-module project and you want to create a version tag for a specific module, you can run:
+
+```sh
+go run main.go -from=v1.2.3
+```
+
+The script will then prompt you to select the module and provide the version type. It will create the appropriate git tag based on your selection.
