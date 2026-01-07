@@ -83,7 +83,6 @@ func main() {
 
 	version := selectVersion(latestVersion, currentModule)
 	version = path.Join(currentModule, version)
-	fmt.Printf("Tagging version: %s\n", version)
 	err = createGitTag(rootDir, version)
 	if err != nil {
 		log.Fatalln("Failed to create git tag:", err)
