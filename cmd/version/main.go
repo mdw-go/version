@@ -81,6 +81,21 @@ func main() {
 		latestVersion = fromTag
 	}
 
+	version := selectVersion(latestVersion, currentModule)
+	version = path.Join(currentModule, version)
+	fmt.Printf("Tagging version: %s\n", version)
+	err = createGitTag(rootDir, version)
+	if err != nil {
+		log.Fatalln("Failed to create git tag:", err)
+	}
+	fmt.Printf("Git tag created: %s\n", version)
+}
+
+func selectVersion(latestVersion string, currentModule string) (result string) {
+	if latestVersion == "" {
+		return prompt("Enter the initial version number (reminder to use a 'v' prefix):")
+	}
+
 	fmt.Printf("The Latest version for %s: %s\n", currentModule, latestVersion)
 
 	var prefixV bool
@@ -103,22 +118,14 @@ func main() {
 	fmt.Printf("4. %s\n", versionSelections["4"])
 	versionType := prompt("Choice:")
 
-	var version string
 	var ok bool
 	for {
-		if version, ok = versionSelections[versionType]; ok {
+		if result, ok = versionSelections[versionType]; ok {
 			break
 		}
 		fmt.Println("Invalid selection, try again.")
 	}
-
-	version = path.Join(currentModule, version)
-	fmt.Printf("Tagging version: %s\n", version)
-	err = createGitTag(rootDir, version)
-	if err != nil {
-		log.Fatalln("Failed to create git tag:", err)
-	}
-	fmt.Printf("Git tag created: %s\n", version)
+	return result
 }
 
 func fmtVersion(v bool, version string) string {
@@ -175,18 +182,17 @@ func getLatestVersion(root, module string) string {
 		output, _ = execute(root, "git", "tag", "--list", module+"/*")
 	}
 	tags := strings.Split(output, "\n")
-	if len(tags) == 0 {
-		output = prompt("Enter the initial version number (reminder to use a 'v' prefix):")
-	} else {
-		var toSort []string
-		for _, tag := range tags {
-			tag = strings.TrimPrefix(tag, module)
-			tag = strings.TrimPrefix(tag, "/")
-			toSort = append(toSort, tag)
-		}
-		tags = FilterAndSortSemverTags(toSort)
-		output = tags[len(tags)-1]
+	if len(tags) == 1 && tags[0] == "" {
+		return ""
 	}
+	var toSort []string
+	for _, tag := range tags {
+		tag = strings.TrimPrefix(tag, module)
+		tag = strings.TrimPrefix(tag, "/")
+		toSort = append(toSort, tag)
+	}
+	tags = FilterAndSortSemverTags(toSort)
+	output = tags[len(tags)-1]
 	output = strings.TrimPrefix(output, module)
 	output = strings.TrimPrefix(output, "/")
 	return output
