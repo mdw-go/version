@@ -95,8 +95,11 @@ func selectVersion(latestVersion string, currentModule string) (result string) {
 	if latestVersion == "" {
 		return prompt("Enter the initial version number (reminder to use a 'v' prefix):")
 	}
-
-	fmt.Printf("The Latest version for %s: %s\n", currentModule, latestVersion)
+	fmt.Print("The latest version")
+	if currentModule != "" {
+		fmt.Print(" for " + currentModule)
+	}
+	fmt.Printf(": %s\n", latestVersion)
 
 	var prefixV bool
 	if latestVersion[0] == 'v' {
