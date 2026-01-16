@@ -145,7 +145,7 @@ func deriveUsername() string {
 	}
 	currentBranch, err := execute("", "git", "branch", "--show-current")
 	if err == nil && strings.Contains(currentBranch, "/") {
-		dir, _ := path.Split(currentBranch)
+		dir, _, _ := strings.Cut(currentBranch, "/")
 		return dir
 	}
 	osUser, err := user.Current()
