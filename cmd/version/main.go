@@ -59,7 +59,7 @@ func selectVersion(latestVersion, currentModule string) (result string) {
 		return prompt("Enter the initial version number (reminder to use a 'v' prefix):")
 	}
 	if currentModule != "" {
-		fmt.Println("go module:", currentModule)
+		fmt.Println("go module", currentModule)
 	}
 
 	var prefixV bool
@@ -189,14 +189,26 @@ func findModuleInfo(root string) (prefix, moduleName string) {
 		return "", ""
 	}
 
-	goModPath := filepath.Join(cwd, "go.mod")
-	if _, err := os.Stat(goModPath); err != nil {
-		return "", ""
+	goModDir := cwd
+	for {
+		goModPath := filepath.Join(goModDir, "go.mod")
+		if _, err := os.Stat(goModPath); err == nil {
+			moduleName = readModuleName(goModPath)
+			break
+		}
+
+		if goModDir == root {
+			return "", ""
+		}
+
+		parent := filepath.Dir(goModDir)
+		if parent == goModDir {
+			return "", ""
+		}
+		goModDir = parent
 	}
 
-	moduleName = readModuleName(goModPath)
-
-	relPath, err := filepath.Rel(root, cwd)
+	relPath, err := filepath.Rel(root, goModDir)
 	if err != nil || relPath == "." {
 		return "", moduleName
 	}
