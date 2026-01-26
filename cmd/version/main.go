@@ -6,14 +6,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"maps"
 	"os"
 	"os/exec"
 	"os/user"
-	"path"
 	"path/filepath"
-	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -28,77 +24,43 @@ func main() {
 	var fromTag string
 	flags := flag.NewFlagSet(fmt.Sprintf("`%s` @ %s", filepath.Base(os.Args[0]), Version), flag.ExitOnError)
 	flags.StringVar(&fromTag, "from", "",
-		"If supplied, calculate proposed versions from this version value, otherwise run with output of `git describe --tags`.")
+		"If supplied, calculate proposed versions from this version value, otherwise run with the 'highest' (semver) "+
+			"version provided by `git tag`.")
 	flags.Usage = func() {
 		_, _ = fmt.Fprintf(flags.Output(), "Usage of %s:\n", flags.Name())
-		_, _ = fmt.Fprintln(flags.Output(),
-			"When executed in a git repo, shows the user a list of incremented tags to choose from. "+
-				"The 'dev' tag includes a 'username', either from an environment variable called 'VERSION_USERNAME', "+
-				"the first path element of the current git branch, "+
-				"or the current OS username (whichever can be resolved first). "+
-				"When executed in a git repo with multiple Go modules, prompts the user for which module to version.")
+		_, _ = fmt.Fprintln(flags.Output(), "TODO")
 		flags.PrintDefaults()
 	}
 	_ = flags.Parse(os.Args[1:])
 
-	rootDir, err := findRootDir()
+	root, err := findRootDir()
 	if err != nil {
-		log.Fatalln("Failed to find the root directory:", err)
+		log.Fatalln("Failed to find git root directory:", err)
 	}
 
-	modules, err := findGoModules(rootDir)
-	if err != nil {
-		log.Fatalln("Failed to find Go modules:", err)
+	modulePrefix, moduleName := findModuleInfo(root)
+	latestVersion := cmp.Or(fromTag, findLatestVersion(modulePrefix))
+	selectedVersion := selectVersion(latestVersion, moduleName)
+
+	tagName := selectedVersion
+	if modulePrefix != "" {
+		tagName = modulePrefix + "/" + selectedVersion
 	}
 
-	if len(modules) == 0 {
-		log.Fatalln("No Go modules found in the project.")
-	}
-
-	var currentModule string
-	if len(modules) == 1 {
-		currentModule = modules[0]
-	} else if len(modules) > 1 {
-		for {
-			fmt.Println("Please select the desired module:")
-			for _, index := range slices.Sorted(maps.Keys(modules)) {
-				fmt.Printf("%d. %s\n", index, modules[index])
-			}
-			choice, _ := strconv.Atoi(prompt("Choice:"))
-			selection, ok := modules[choice]
-			if ok {
-				currentModule = selection
-				break
-			}
-			fmt.Println("Invalid choice, please try again.")
-		}
-	}
-
-	var latestVersion string
-	if fromTag == "" {
-		latestVersion = getLatestVersion(rootDir, currentModule)
-	} else {
-		latestVersion = fromTag
-	}
-
-	version := selectVersion(latestVersion, currentModule)
-	version = path.Join(currentModule, version)
-	err = createGitTag(rootDir, version)
-	if err != nil {
+	if err := createGitTag(root, tagName); err != nil {
 		log.Fatalln("Failed to create git tag:", err)
 	}
-	fmt.Printf("Git tag created: %s\n", version)
+
+	fmt.Printf("Created tag: %s\n", tagName)
 }
 
-func selectVersion(latestVersion string, currentModule string) (result string) {
+func selectVersion(latestVersion, currentModule string) (result string) {
 	if latestVersion == "" {
 		return prompt("Enter the initial version number (reminder to use a 'v' prefix):")
 	}
-	fmt.Print("The latest version")
 	if currentModule != "" {
-		fmt.Print(" for " + currentModule)
+		fmt.Println("go module:", currentModule)
 	}
-	fmt.Printf(": %s\n", latestVersion)
 
 	var prefixV bool
 	if latestVersion[0] == 'v' {
@@ -114,10 +76,10 @@ func selectVersion(latestVersion string, currentModule string) (result string) {
 	}
 
 	fmt.Println("Please select the next version:")
-	fmt.Printf("1. %s\n", versionSelections["1"])
-	fmt.Printf("2. %s\n", versionSelections["2"])
-	fmt.Printf("3. %s\n", versionSelections["3"])
-	fmt.Printf("4. %s\n", versionSelections["4"])
+	fmt.Printf("1. %s -> %s\n", latestVersion, versionSelections["1"])
+	fmt.Printf("2. %s -> %s\n", latestVersion, versionSelections["2"])
+	fmt.Printf("3. %s -> %s\n", latestVersion, versionSelections["3"])
+	fmt.Printf("4. %s -> %s\n", latestVersion, versionSelections["4"])
 	versionType := prompt("Choice:")
 
 	var ok bool
@@ -157,47 +119,6 @@ func deriveUsername() string {
 
 func findRootDir() (string, error) {
 	return execute("", "git", "rev-parse", "--show-toplevel")
-}
-
-func findGoModules(rootDir string) (modules map[int]string, err error) {
-	output, err := execute("", "find", rootDir, "-name", "go.mod")
-	if err != nil {
-		return nil, err
-	}
-	modules = make(map[int]string)
-	for i, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		line = strings.TrimPrefix(line, ".")
-		line = strings.TrimPrefix(line, rootDir)
-		line = strings.TrimPrefix(line, "/")
-		line = strings.TrimSuffix(line, "/go.mod")
-		modules[i+1] = line
-	}
-	return modules, nil
-}
-
-func getLatestVersion(root, module string) string {
-	var output string
-	if module == "" {
-		output, _ = execute("", "git", "describe", "--tags", "--abbrev=0")
-	} else {
-		output, _ = execute(root, "git", "tag", "--list", module+"/*")
-	}
-	tags := strings.Split(output, "\n")
-	if len(tags) == 1 && tags[0] == "" {
-		return ""
-	}
-	var toSort []string
-	for _, tag := range tags {
-		tag = strings.TrimPrefix(tag, module)
-		tag = strings.TrimPrefix(tag, "/")
-		toSort = append(toSort, tag)
-	}
-	tags = FilterAndSortSemverTags(toSort)
-	output = tags[len(tags)-1]
-	output = strings.TrimPrefix(output, module)
-	output = strings.TrimPrefix(output, "/")
-	return output
 }
 
 func incrementMajorVersion(version string) string {
@@ -250,85 +171,6 @@ func execute(dir string, args ...string) (string, error) {
 	return strings.TrimSpace(string(out)), err
 }
 
-type semver struct {
-	major int
-	minor int
-	patch int
-	pre   []string
-}
-
-type entry struct {
-	original string
-	version  semver
-}
-
-// FilterAndSortSemverTags filters tags that start with a valid semver
-// prefix and returns them sorted by semantic version precedence.
-func FilterAndSortSemverTags(tags []string) []string {
-	var entries []entry
-
-	for _, tag := range tags {
-		if v, ok := parseSemverPrefix(tag); ok {
-			entries = append(entries, entry{
-				original: tag,
-				version:  v,
-			})
-		}
-	}
-
-	sort.Slice(entries, func(i, j int) bool {
-		return compareSemver(entries[i].version, entries[j].version) < 0
-	})
-
-	out := make([]string, len(entries))
-	for i, e := range entries {
-		out[i] = e.original
-	}
-	return out
-}
-
-// parseSemverPrefix parses a semver at the start of s.
-func parseSemverPrefix(s string) (semver, bool) {
-	var v semver
-
-	if strings.HasPrefix(s, "v") {
-		s = s[1:]
-	}
-
-	// Split build metadata (ignored for ordering)
-	if i := strings.IndexByte(s, '+'); i >= 0 {
-		s = s[:i]
-	}
-
-	main, pre := s, ""
-	if i := strings.IndexByte(s, '-'); i >= 0 {
-		main = s[:i]
-		pre = s[i+1:]
-	}
-
-	parts := strings.Split(main, ".")
-	if len(parts) != 3 {
-		return v, false
-	}
-
-	var err error
-	if v.major, err = parseInt(parts[0]); err != nil {
-		return v, false
-	}
-	if v.minor, err = parseInt(parts[1]); err != nil {
-		return v, false
-	}
-	if v.patch, err = parseInt(parts[2]); err != nil {
-		return v, false
-	}
-
-	if pre != "" {
-		v.pre = strings.Split(pre, ".")
-	}
-
-	return v, true
-}
-
 func parseInt(s string) (int, error) {
 	if s == "" {
 		return 0, strconv.ErrSyntax
@@ -341,56 +183,155 @@ func parseInt(s string) (int, error) {
 	return strconv.Atoi(s)
 }
 
-// compareSemver returns -1 if a < b, 0 if equal, 1 if a > b
-func compareSemver(a, b semver) int {
-	if a.major != b.major {
-		return cmp.Compare(a.major, b.major)
-	}
-	if a.minor != b.minor {
-		return cmp.Compare(a.minor, b.minor)
-	}
-	if a.patch != b.patch {
-		return cmp.Compare(a.patch, b.patch)
+func findModuleInfo(root string) (prefix, moduleName string) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", ""
 	}
 
-	// Handle prerelease precedence
-	if len(a.pre) == 0 && len(b.pre) == 0 {
-		return 0
-	}
-	if len(a.pre) == 0 {
-		return 1 // release > prerelease
-	}
-	if len(b.pre) == 0 {
-		return -1
+	goModPath := filepath.Join(cwd, "go.mod")
+	if _, err := os.Stat(goModPath); err != nil {
+		return "", ""
 	}
 
-	for i := 0; i < len(a.pre) && i < len(b.pre); i++ {
-		ai, aNum := numeric(a.pre[i])
-		bi, bNum := numeric(b.pre[i])
+	moduleName = readModuleName(goModPath)
 
-		switch {
-		case aNum && bNum:
-			if ai != bi {
-				return cmp.Compare(ai, bi)
-			}
-		case aNum:
-			return -1
-		case bNum:
-			return 1
-		default:
-			if a.pre[i] != b.pre[i] {
-				if a.pre[i] < b.pre[i] {
-					return -1
-				}
-				return 1
-			}
+	relPath, err := filepath.Rel(root, cwd)
+	if err != nil || relPath == "." {
+		return "", moduleName
+	}
+
+	return relPath, moduleName
+}
+
+func readModuleName(goModPath string) string {
+	content, err := os.ReadFile(goModPath)
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(content), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "module ") {
+			return strings.TrimSpace(strings.TrimPrefix(line, "module "))
+		}
+	}
+	return ""
+}
+
+func findLatestVersion(modulePrefix string) string {
+	output, err := execute("", "git", "tag")
+	if err != nil || output == "" {
+		return ""
+	}
+
+	tags := strings.Split(output, "\n")
+	var versions []string
+
+	for _, tag := range tags {
+		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			continue
+		}
+
+		version := extractVersion(tag, modulePrefix)
+		if version != "" && isSemVer(version) {
+			versions = append(versions, version)
 		}
 	}
 
-	return cmp.Compare(len(a.pre), len(b.pre))
+	if len(versions) == 0 {
+		return ""
+	}
+
+	return findHighestVersion(versions)
 }
 
-func numeric(s string) (int, bool) {
-	n, err := strconv.Atoi(s)
-	return n, err == nil
+func extractVersion(tag, modulePrefix string) string {
+	if modulePrefix == "" {
+		return tag
+	}
+	if strings.HasPrefix(tag, modulePrefix+"/") {
+		return strings.TrimPrefix(tag, modulePrefix+"/")
+	}
+	return ""
+}
+
+func isSemVer(version string) bool {
+	if version == "" {
+		return false
+	}
+	if version[0] == 'v' {
+		version = version[1:]
+	}
+
+	if idx := strings.Index(version, "-"); idx != -1 {
+		version = version[:idx]
+	}
+
+	parts := strings.Split(version, ".")
+	if len(parts) != 3 {
+		return false
+	}
+
+	for _, part := range parts {
+		if _, err := parseInt(part); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
+func findHighestVersion(versions []string) string {
+	if len(versions) == 0 {
+		return ""
+	}
+
+	highest := versions[0]
+	for _, v := range versions[1:] {
+		if compareVersions(v, highest) > 0 {
+			highest = v
+		}
+	}
+	return highest
+}
+
+func compareVersions(a, b string) int {
+	aClean, bClean := a, b
+	if len(a) > 0 && a[0] == 'v' {
+		aClean = a[1:]
+	}
+	if len(b) > 0 && b[0] == 'v' {
+		bClean = b[1:]
+	}
+
+	aBase, aPrerelease := splitPrerelease(aClean)
+	bBase, bPrerelease := splitPrerelease(bClean)
+
+	aParts := strings.Split(aBase, ".")
+	bParts := strings.Split(bBase, ".")
+
+	for i := 0; i < 3; i++ {
+		aNum, _ := strconv.Atoi(aParts[i])
+		bNum, _ := strconv.Atoi(bParts[i])
+		if aNum != bNum {
+			return aNum - bNum
+		}
+	}
+
+	if aPrerelease == "" && bPrerelease != "" {
+		return 1
+	}
+	if aPrerelease != "" && bPrerelease == "" {
+		return -1
+	}
+
+	return strings.Compare(aPrerelease, bPrerelease)
+}
+
+func splitPrerelease(version string) (base, prerelease string) {
+	idx := strings.Index(version, "-")
+	if idx == -1 {
+		return version, ""
+	}
+	return version[:idx], version[idx+1:]
 }
